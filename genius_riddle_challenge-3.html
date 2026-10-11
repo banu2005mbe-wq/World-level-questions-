@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>World-Level Genius Challenge</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:linear-gradient(135deg,#ff4ecd,#6c5ce7 45%,#00d4ff);color:#fff;min-height:100vh;display:grid;place-items:center;padding:20px;animation:bg 8s ease-in-out infinite alternate}
+@keyframes bg{to{background:linear-gradient(135deg,#00d4ff,#7c3aed 45%,#ff4ecd)}}
+.card{width:min(760px,100%);background:linear-gradient(145deg,rgba(255,255,255,.24),rgba(255,255,255,.10));backdrop-filter:blur(16px);border:2px solid rgba(255,255,255,.35);border-radius:24px;padding:28px;box-shadow:0 20px 60px #0005}
+h1{text-align:center;margin:0 0 8px;font-size:clamp(28px,7vw,44px)}
+.sub{text-align:center;color:#dbeafe;margin:0 0 24px}
+.progress{height:9px;background:#ffffff25;border-radius:99px;overflow:hidden;margin-bottom:22px}
+.bar{height:100%;width:10%;background:linear-gradient(90deg,#ffe66d,#ff6ec7,#6ee7ff);transition:.3s}
+.qnum{font-weight:700;color:#c4b5fd;margin-bottom:10px}
+.question{font-size:22px;line-height:1.45;margin-bottom:20px}
+.answers{display:grid;gap:12px}
+.answers button,.next,.send{border:0;border-radius:14px;padding:15px 16px;text-align:left;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#fff,#f3e8ff);color:#24113f;transition:.15s;box-shadow:0 5px 15px #0002}
+.answers button:hover{transform:translateY(-1px);background:#ede9fe}
+.answers button.correct{background:#bbf7d0}
+.answers button.wrong{background:#fecaca}
+.next,.send{margin-top:18px;color:white;text-align:center;font-weight:700;width:100%;box-shadow:0 7px 18px #0003}
+.next{background:linear-gradient(90deg,#ff6ec7,#8b5cf6,#22d3ee)}
+.send{background:linear-gradient(90deg,#06b6d4,#2563eb,#7c3aed)}
+.next:disabled{opacity:.45;cursor:not-allowed}
+.result{text-align:center}
+.score{font-size:64px;font-weight:800;margin:15px 0}
+.restart{background:linear-gradient(90deg,#ff6ec7,#8b5cf6);color:white;border:0;border-radius:14px;padding:14px 22px;font-size:16px;font-weight:700;cursor:pointer;margin-top:12px}
+.welcome-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;z-index:1000}
+.welcome-card{width:min(520px,100%);padding:36px;border-radius:28px;background:rgba(255,255,255,.94);box-shadow:0 20px 60px rgba(0,0,0,.22);text-align:center;backdrop-filter:blur(14px);color:#24113f}
+.welcome-icon{font-size:52px;margin-bottom:8px}
+.welcome-card h1{margin:0 0 8px}
+.welcome-subtitle{margin:0 0 24px;color:#555}
+.welcome-card label{display:block;text-align:left;font-weight:700;margin:14px 0 7px}
+.welcome-card input{width:100%;padding:14px 16px;border:2px solid #ddd;border-radius:14px;font-size:16px;outline:none}
+.welcome-card input:focus{border-color:#8b5cf6}
+.start-btn{width:100%;margin-top:22px;padding:15px;border:0;border-radius:15px;font-size:17px;font-weight:800;color:white;cursor:pointer;background:linear-gradient(90deg,#ff4ecd,#7c3aed,#00c6ff)}
+.welcome-error{min-height:20px;margin:10px 0 0;color:#d11;font-weight:600}
+.player-greeting{margin:8px 0 14px;font-weight:700;font-size:16px}
+.send-status{min-height:24px;margin-top:10px;font-weight:700}
+.small-note{font-size:13px;color:#dbeafe;margin-top:16px;line-height:1.4}
+</style>
+</head>
+<body>
+
+<div id="welcomeScreen" class="welcome-screen">
+  <div class="welcome-card">
+    <div class="welcome-icon">🌍🧠</div>
+    <h1>World-Level Genius Challenge</h1>
+    <p class="welcome-subtitle">10 extremely tough logic, probability and strategy problems.</p>
+    <label for="playerName">Your Name</label>
+    <input id="playerName" type="text" placeholder="Enter your name" autocomplete="name">
+    <label for="nickname">Your Nickname</label>
+    <input id="nickname" type="text" placeholder="Enter your nickname">
+    <button id="startQuizBtn" class="start-btn">🚀 Start Challenge</button>
+    <p id="welcomeError" class="welcome-error"></p>
+  </div>
+</div>
+
+<main class="card" id="app"></main>
+
+<script>
+/*
+  OWNER SETUP:
+  Replace YOUR_EMAIL_HERE with the email address where you want results sent.
+  The result button opens the player's email app with the result already filled in.
+  A truly automatic background submission needs an online form/database endpoint.
+*/
+const OWNER_EMAIL = "YOUR_EMAIL_HERE";
+
+const questions = [
+  {
+    q:"100 prisoners each have a unique numbered box. Inside the 100 boxes are the prisoners' numbers in a random permutation. Each prisoner may open at most 50 boxes. They cannot communicate after the challenge starts. What strategy gives the group a surprisingly high chance (about 31%) that everyone finds their own number?",
+    options:[
+      "Each prisoner opens 50 random boxes.",
+      "Each prisoner starts with the box bearing their own number and follows the number found inside to the next box.",
+      "All prisoners open the same 50 boxes.",
+      "Each prisoner opens boxes in numerical order."
+    ], answer:1
+  },
+  {
+    q:"You have 12 identical-looking coins. Exactly one is heavier. Using a balance scale exactly three times, what is the maximum number of coins among which you can always identify the heavier coin?",
+    options:["9","10","12","15"], answer:2
+  },
+  {
+    q:"100 lockers start closed. Person 1 toggles every locker, person 2 every 2nd locker, person 3 every 3rd locker, and so on through person 100. Which lockers remain open?",
+    options:[
+      "Prime-numbered lockers",
+      "Even-numbered lockers",
+      "Perfect-square-numbered lockers",
+      "Only locker 100"
+    ], answer:2
+  },
+  {
+    q:"There are 3 switches outside a closed room and 1 bulb inside. Only one switch controls the bulb. You may manipulate the switches as much as you like, but you may enter the room only once. What is the key trick?",
+    options:[
+      "Turn all three on and enter.",
+      "Turn one on, wait, turn it off, turn another on, then enter and use the bulb's light and warmth.",
+      "Turn one switch on and enter immediately.",
+      "Flip all three switches in a fixed pattern and listen."
+    ], answer:1
+  },
+  {
+    q:"You have 2 identical eggs and a 100-floor building. An egg breaks if dropped from a high enough floor. What is the minimum number of drops needed in the worst case to determine the highest safe floor?",
+    options:["10","12","14","20"], answer:2
+  },
+  {
+    q:"Two ropes each take exactly 60 minutes to burn, but neither burns at a uniform rate. How can you measure exactly 45 minutes?",
+    options:[
+      "Light one end of rope A and wait 45 minutes.",
+      "Light both ends of A and one end of B. When A finishes, light the other end of B.",
+      "Cut both ropes in half.",
+      "Light one end of A, then light the other end after 15 minutes."
+    ], answer:1
+  },
+  {
+    q:"A game show has 3 doors. Behind one is a prize; behind the other two are goats. You choose a door. The host, who knows where the prize is, opens one of the other doors and reveals a goat, then offers you the chance to switch. What is the probability of winning if you switch?",
+    options:["1/3","1/2","2/3","3/4"], answer:2
+  },
+  {
+    q:"Four people must cross a bridge at night. Their crossing times are 1, 2, 7 and 10 minutes. Only two can cross at once, they need one flashlight, and a pair moves at the slower person's speed. What is the minimum total time?",
+    options:["15 minutes","17 minutes","19 minutes","21 minutes"], answer:1
+  },
+  {
+    q:"You have 1,000 bottles and exactly one is poisoned. The poison is detectable the next day. What is the minimum number of test subjects needed if each subject can receive a mixture of drops from many bottles, and you can test only once?",
+    options:["8","9","10","100"], answer:2
+  },
+  {
+    q:"A positive integer leaves remainder 1 when divided by 2, remainder 2 when divided by 3, remainder 3 when divided by 4, and remainder 4 when divided by 5. What is the smallest possible integer?",
+    options:["29","39","49","59"], answer:3
+  }
+];
+
+let i=0, score=0, answered=false, playerName="", playerNickname="";
+
+function render(){
+  const app=document.getElementById("app");
+  if(i>=questions.length){
+    app.innerHTML=`
+      <div class="result">
+        <h1>🏆 Challenge Complete!</h1>
+        <p class="sub">${escapeHtml(playerNickname)}, your final score is</p>
+        <div class="score">${score}/10</div>
+        <p>${score===10?"🌍 WORLD-CLASS! Perfect score.":score>=8?"🔥 Outstanding!":"🧠 Tough challenge! Try again and beat your score."}</p>
+        <button class="send" id="sendResultBtn">📩 Send My Result</button>
+        <div class="send-status" id="sendStatus"></div>
+        <button class="restart" onclick="restart()">Play Again</button>
+        <p class="small-note">The send button prepares an email containing the player's name, nickname and score.</p>
+      </div>`;
+    document.getElementById("sendResultBtn").onclick=sendResult;
+    return;
+  }
+
+  const q=questions[i];
+  app.innerHTML=`
+    <h1>🌍 World-Level Genius Challenge</h1>
+    <p class="sub">10 brutal logic & strategy problems • No easy ones!</p>
+    <div id="playerGreeting" class="player-greeting">Good luck, ${escapeHtml(playerNickname)}! (${escapeHtml(playerName)}) 🌟</div>
+    <div class="progress"><div class="bar" style="width:${(i+1)*10}%"></div></div>
+    <div class="qnum">CHALLENGE ${i+1} OF 10</div>
+    <div class="question">${q.q}</div>
+    <div class="answers">${q.options.map((o,n)=>`<button onclick="choose(${n})">${String.fromCharCode(65+n)}) ${o}</button>`).join("")}</div>
+    <button class="next" id="next" onclick="next()" disabled>${i===9?"See Final Score":"Next Challenge →"}</button>`;
+  answered=false;
+}
+
+function choose(n){
+  if(answered)return;
+  answered=true;
+  const buttons=document.querySelectorAll(".answers button");
+  buttons.forEach((b,j)=>{
+    b.disabled=true;
+    if(j===questions[i].answer)b.classList.add("correct");
+    if(j===n && n!==questions[i].answer)b.classList.add("wrong");
+  });
+  if(n===questions[i].answer)score++;
+  document.getElementById("next").disabled=false;
+}
+
+function next(){i++;render()}
+function restart(){i=0;score=0;render()}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+}
+
+function sendResult(){
+  const status=document.getElementById("sendStatus");
+  if(OWNER_EMAIL==="YOUR_EMAIL_HERE"){
+    status.textContent="⚠️ Owner email is not configured yet. Replace YOUR_EMAIL_HERE near the top of the HTML file with your email.";
+    return;
+  }
+  const subject=encodeURIComponent("World-Level Genius Challenge Result");
+  const body=encodeURIComponent(
+    "Player name: "+playerName+
+    "\\nNickname: "+playerNickname+
+    "\\nScore: "+score+"/10"+
+    "\\nCompleted: "+new Date().toLocaleString()
+  );
+  window.location.href="mailto:"+encodeURIComponent(OWNER_EMAIL)+"?subject="+subject+"&body="+body;
+  status.textContent="📩 Your email app should open with the result ready to send.";
+}
+
+document.getElementById("startQuizBtn").addEventListener("click",()=>{
+  const name=document.getElementById("playerName").value.trim();
+  const nickname=document.getElementById("nickname").value.trim();
+  const error=document.getElementById("welcomeError");
+  if(!name || !nickname){
+    error.textContent="Please enter both your name and nickname.";
+    return;
+  }
+  playerName=name;
+  playerNickname=nickname;
+  document.getElementById("welcomeScreen").style.display="none";
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
